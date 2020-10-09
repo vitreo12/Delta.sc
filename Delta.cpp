@@ -9,15 +9,20 @@ struct Delta : public Unit
 
 static void Delta_next_a_a(Delta* unit, int inNumSamples);
 static void Delta_next_a_k(Delta* unit, int inNumSamples);
+static void Delta_next_k_k(Delta* unit, int inNumSamples);
 
 static void Delta_Ctor(Delta* unit);
 
 void Delta_Ctor(Delta* unit) 
 {
-    if(INRATE(1) == calc_FullRate)
+    if(INRATE(0) == calc_FullRate && INRATE(1) == calc_FullRate)
         SETCALC(Delta_next_a_a);
-    else
+    else if(INRATE(0) == calc_BufRate && INRATE(1) == calc_BufRate)
+        SETCALC(Delta_next_k_k);
+    else if(INRATE(0) == calc_FullRate && INRATE(1) == calc_BufRate)
         SETCALC(Delta_next_a_k);
+    else
+        SETCALC(Delta_next_k_k);
        
     //calc one sample
     Delta_next_a_k(unit, 1);
@@ -75,6 +80,25 @@ void Delta_next_a_k(Delta* unit, int inNumSamples)
     }
 
     unit->prevSample = prevSample;
+}
+
+void Delta_next_k_k(Delta* unit, int inNumSamples) 
+{
+    float in_val = IN0(0);
+    
+    float thresh_val = IN0(1);
+
+    float* out = OUT(0);
+
+    float out_val = 0.0f;
+
+    if(abs(in_val - unit->prevSample) >= thresh_val)
+        out_val = 1.0f;
+
+    for(int i = 0; i < inNumSamples; i++)
+        out[i] = out_val;
+
+    unit->prevSample = in_val;
 }
 
 PluginLoad(DeltaUGens) 
